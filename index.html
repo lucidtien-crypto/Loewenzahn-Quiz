@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Löwenzahn-Spiel - Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --sky-color-1: #4ca1af;
+            --sky-color-2: #c4e0e5;
+            --sun-color: #fceabb;
+            --sun-glow: rgba(252, 234, 187, 0.8);
+            --text-color: #2c3e50;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        body, html {
+            width: 100%; height: 100%; overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--sky-color-1) 0%, var(--sky-color-2) 100%);
+        }
+
+        #environment { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; transition: background 1s ease; }
+        
+        #sun {
+            position: absolute; top: 15vh; right: 15vw;
+            width: 120px; height: 120px;
+            background: var(--sun-color); border-radius: 50%;
+            box-shadow: 0 0 60px 20px var(--sun-glow); z-index: 2;
+        }
+
+        #moon {
+            position: absolute; top: 100vh; left: -10vw; 
+            width: 90px; height: 90px; border-radius: 50%;
+            background: transparent; box-shadow: inset -20px 0 0 0 #ecf0f1;
+            z-index: 2; opacity: 0;
+        }
+
+        #stars-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; opacity: 0; pointer-events: none;
+        }
+        .star {
+            position: absolute; background: white; border-radius: 50%;
+            box-shadow: 0 0 10px 2px rgba(255,255,255,0.8);
+        }
+        .particle {
+            position: absolute; width: 3px; height: 3px;
+            background: #fff; border-radius: 50%;
+            box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.6);
+            opacity: 0; z-index: 4; pointer-events: none;
+        }
+
+        /* Neue Berge */
+        #mountains {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 45vh;
+            z-index: 3; pointer-events: none; overflow: hidden;
+        }
+        .mountain-path { fill: #72a8b2; } /* Standard Tag-Farbe */
+
+        #landscape {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 35vh;
+            z-index: 5; pointer-events: none; overflow: hidden;
+        }
+        .wave-path { fill: rgba(255, 255, 255, 0.15); transform-origin: bottom center; }
+        .wave-path.back { fill: rgba(255, 255, 255, 0.08); animation: breathe 8s ease-in-out infinite alternate; }
+        .wave-path.front { animation: breathe 6s ease-in-out infinite alternate-reverse; }
+        @keyframes breathe {
+            0% { transform: scaleY(1) translateY(0); }
+            100% { transform: scaleY(1.1) translateY(-10px); }
+        }
+
+        #main-wrapper {
+            position: relative; z-index: 10;
+            width: 100%; height: 100%; display: flex; flex-direction: column; 
+            align-items: center; justify-content: flex-end; padding-bottom: 5vh; max-width: 900px; margin: 0 auto;
+        }
+
+        #dandelion-container {
+            position: relative; width: 300px; height: 380px; margin-bottom: -20px; margin-right: 15%; 
+        }
+        #dandelion-art { width: 100%; height: 100%; overflow: visible; }
+        .stem { stroke: #78e08f; stroke-width: 4; fill: none; filter: drop-shadow(0 0 5px rgba(120, 224, 143, 0.6)); }
+        .seed { transform-origin: 150px 150px; opacity: 0.95; }
+        .seed-line { stroke: rgba(255,255,255,0.7); stroke-width: 1.5; }
+        .seed-dot { fill: rgba(255,255,255,1); filter: drop-shadow(0 0 4px white); }
+
+        #hint-display {
+            font-family: 'Inter', sans-serif; font-size: 1.2rem; font-style: italic;
+            color: var(--text-color); margin-bottom: 10px; opacity: 0.8;
+            background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px;
+        }
+
+        #message {
+            font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700;
+            color: var(--text-color); margin-bottom: 20px; text-align: center;
+            min-height: 40px; text-shadow: 0 2px 10px rgba(255,255,255,0.5);
+            letter-spacing: 2px;
+        }
+
+        #word-display { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; padding: 0 15px; }
+        .letter-tile {
+            width: 50px; height: 60px;
+            background: var(--glass-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: bold;
+            color: var(--text-color); box-shadow: var(--glass-shadow);
+        }
+        .letter-tile.space { background: transparent; border: none; box-shadow: none; width: 25px; }
+
+        #keyboard {
+            display: flex; flex-direction: column; gap: 8px; align-items: center;
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            padding: 20px; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow);
+        }
+        .keyboard-row { display: flex; gap: 6px; }
+        .key {
+            padding: 12px 18px; font-family: 'Inter', sans-serif; font-size: 1.1rem; font-weight: 600;
+            color: var(--text-color); background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 10px; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .key:hover { background: rgba(255, 255, 255, 0.9); transform: translateY(-2px); }
+        .key.correct { background: linear-gradient(135deg, #a8e063, #56ab2f); color: white; border: none; pointer-events: none; box-shadow: 0 0 15px rgba(86, 171, 47, 0.5);}
+        .key.wrong { background: rgba(0, 0, 0, 0.2); color: rgba(255, 255, 255, 0.4); border: 1px solid rgba(0,0,0,0.1); pointer-events: none; }
+
+        #next-btn {
+            margin-top: 20px; padding: 12px 30px; font-size: 1.1rem; font-weight: 600;
+            background: linear-gradient(135deg, #f6d365, #fda085); color: #fff;
+            border: none; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1); transition: all 0.3s;
+            display: none; opacity: 0;
+        }
+        #next-btn:hover { transform: scale(1.05); box-shadow: 0 12px 20px rgba(0,0,0,0.2); }
+
+        .controls-container {
+            position: absolute; top: 20px; right: 20px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 100;
+            align-items: flex-end;
+        }
+
+        .control-btn {
+            background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+            border-radius: 50px; padding: 10px 20px; color: var(--text-color); font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s;
+        }
+        .control-btn:hover { background: rgba(255, 255, 255, 0.4); }
+        
+        #qr-btn-main { background: #8e44ad; color: white; border: none; }
+        #qr-btn-main:hover { background: #9b59b6; }
+
+        #teacher-panel {
+            position: absolute; top: 130px; right: 20px; width: 360px; max-height: 75vh;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px);
+            border-radius: 16px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border); z-index: 100;
+            display: none; flex-direction: column; gap: 10px; overflow-y: auto;
+        }
+        #teacher-panel.show { display: flex; animation: slideDown 0.3s forwards; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .input-group input { padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 8px; outline: none; }
+        #new-word-input { text-transform: uppercase; font-weight: bold;}
+        .add-btn { background: #27ae60; color: white; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        #word-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 5px; }
+        .word-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.05); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; }
+        .word-content { display: flex; flex-direction: column; }
+        .word-content strong { color: #2c3e50; }
+        .word-content span { color: #7f8c8d; font-size: 0.8rem; }
+        .word-item button { background: #e74c3c; color: white; border: none; border-radius: 4px; width: 25px; height: 25px; cursor: pointer; font-weight: bold; }
+
+        #qr-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 200;
+        }
+        .qr-box {
+            background: white; padding: 30px; border-radius: 20px; text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3); max-width: 90%;
+        }
+        #qr-code-img { width: 200px; height: 200px; margin: 15px auto; }
+        .qr-close-btn { margin-top: 15px; padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+<div id="environment"></div>
+<div id="stars-container"></div>
+<div id="sun"></div>
+<div id="moon"></div>
+
+<div id="mountains">
+    <svg viewBox="0 0 1440 320" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+        <path class="mountain-path" d="M0,320 L0,200 L150,80 L350,220 L650,40 L950,250 L1250,90 L1440,200 L1440,320 Z"></path>
+    </svg>
+</div>
+
+<div id="landscape">
+    <svg viewBox="0 0 1440 320" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+        <path class="wave-path back" d="M0,160L80,170.7C160,181,320,203,480,186.7C640,171,800,117,960,112C1120,107,1280,149,1360,170.7L1440,192L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+        <path class="wave-path front" d="M0,224L60,213.3C120,203,240,181,360,181.3C480,181,600,203,720,218.7C840,235,960,245,1080,240C1200,235,1320,213,1380,202.7L1440,192L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+    </svg>
+</div>
+
+<div id="main-wrapper">
+    <div id="dandelion-container">
+        <svg id="dandelion-art" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+            <path class="stem" d="M 150 400 Q 155 250 150 150" />
+            <circle cx="150" cy="150" r="6" fill="#fdfbfb" />
+            <g id="seeds-group"></g>
+        </svg>
+    </div>
+
+    <div id="hint-display"></div>
+    <div id="message"></div>
+    <div id="word-display"></div>
+    <div id="keyboard"></div>
+    <button id="next-btn" onclick="startRandomGame()">Nächstes Wort ➔</button>
+</div>
+
+<div class="controls-container" id="controls-container">
+    <button class="control-btn" id="settings-btn" onclick="toggleTeacher()">⚙️ Einstellungen</button>
+    <button class="control-btn" id="qr-btn-main" onclick="generateQR()">📲 QR-Code teilen</button>
+</div>
+
+<div id="teacher-panel">
+    <h3 style="font-family: 'Playfair Display'; color: #2c3e50;">Wortschatz verwalten</h3>
+    <div class="input-group">
+        <input type="text" id="new-word-input" placeholder="Lösungswort...">
+        <input type="text" id="new-hint-input" placeholder="Hinweis für Schüler..." onkeypress="handleEnter(event)">
+    </div>
+    <button class="add-btn" onclick="addNewWord()">➕ Wort hinzufügen</button>
+
+    <hr style="border:0; border-top: 1px solid #ddd; margin: 10px 0;">
+    <div id="word-list"></div>
+    <button onclick="startRandomGame(); document.getElementById('teacher-panel').classList.remove('show');" style="width: 100%; padding: 12px; background: #2980b9; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px;">
+        ▶ Testspiel starten
+    </button>
+</div>
+
+<div id="qr-modal">
+    <div class="qr-box">
+        <h3 style="color: #2c3e50;">Scannen und Spielen</h3>
+        <p style="font-size: 0.9rem; color: #7f8c8d; margin-top: 5px;">Schüler können diesen Code scannen, um ohne Einstellungen zu spielen.</p>
+        <img id="qr-code-img" src="" alt="QR Code">
+        <br>
+        <button class="qr-close-btn" onclick="document.getElementById('qr-modal').style.display='none'">Schließen</button>
+    </div>
+</div>
+
+<script>
+    const maxLives = 12;
+    let wordBank = [];
+    let currentWordObj = null;
+    let guessedLetters = new Set();
+    let wrongCount = 0;
+    let seedElements = [];
+    let isGameOver = false;
+
+    const keyboardLayout = [
+        ['Q', 'W', 'E', 'R', 'T', 'Z', 'U', 'I', 'O', 'P', 'Ü'],
+        ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ö', 'Ä'],
+        ['Y', 'X', 'C', 'V', 'B', 'N', 'M', 'ß']
+    ];
+
+    // Click Outside Logik für das Einstellungen-Panel
+    document.addEventListener('mousedown', function(event) {
+        const panel = document.getElementById('teacher-panel');
+        const settingsBtn = document.getElementById('settings-btn');
+        if (panel.classList.contains('show') && !panel.contains(event.target) && !settingsBtn.contains(event.target)) {
+            panel.classList.remove('show');
+        }
+    });
+
+    function init() {
+        createStars();
+        createParticles();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const encodedData = urlParams.get('game');
+
+        if (encodedData) {
+            document.getElementById('controls-container').style.display = 'none'; 
+            try {
+                wordBank = JSON.parse(decodeURIComponent(atob(encodedData)));
+            } catch (e) {
+                alert("Der Link ist fehlerhaft oder veraltet!");
+                wordBank = [{ word: "FEHLER", hint: "Falscher Link" }];
+            }
+        } else {
+            const savedWords = localStorage.getItem("germanWordBankV3");
+            if (savedWords) {
+                wordBank = JSON.parse(savedWords);
+            } else {
+                wordBank = [
+                    { word: "WUNDERSCHÖN", hint: "Sehr hübsch (Adjektiv)" },
+                    { word: "SCHMETTERLING", hint: "Buntes Insekt" }
+                ];
+                saveWordBank();
+            }
+            renderWordList();
+        }
+        
+        startRandomGame();
+    }
+
+    function createParticles() {
+        const container = document.getElementById('environment');
+        for (let i = 0; i < 40; i++) {
+            let p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.bottom = (Math.random() * 20 - 5) + 'vh';
+            container.appendChild(p);
+            
+            gsap.to(p, {
+                y: "-=" + (150 + Math.random() * 200),
+                x: "+=" + ((Math.random() - 0.5) * 100),
+                opacity: Math.random() * 0.8 + 0.2,
+                duration: Math.random() * 4 + 6,
+                repeat: -1, yoyo: false, ease: "power1.inOut", delay: Math.random() * 5
+            });
+            gsap.to(p, { opacity: 0, duration: Math.random() * 2 + 1, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        }
+    }
+
+    function createStars() {
+        const container = document.getElementById('stars-container');
+        container.innerHTML = '';
+        for (let i = 0; i < 80; i++) {
+            let star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 2.5 + 'px';
+            star.style.height = star.style.width;
+            star.style.top = Math.random() * 80 + '%';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.opacity = Math.random();
+            container.appendChild(star);
+        }
+    }
+
+    function saveWordBank() { localStorage.setItem("germanWordBankV3", JSON.stringify(wordBank)); }
+
+    function renderWordList() {
+        const listDiv = document.getElementById('word-list');
+        listDiv.innerHTML = '';
+        wordBank.forEach((item, index) => {
+            let div = document.createElement('div');
+            div.className = 'word-item';
+            div.innerHTML = `
+                <div class="word-content">
+                    <strong>${item.word}</strong>
+                    <span>💡 ${item.hint || "Kein Hinweis"}</span>
+                </div>
+                <button onclick="deleteWord(${index})" title="Löschen">✕</button>
+            `;
+            listDiv.appendChild(div);
+        });
+    }
+
+    function handleEnter(e) { if (e.key === 'Enter') addNewWord(); }
+
+    function addNewWord() {
+        const wordInput = document.getElementById('new-word-input');
+        const hintInput = document.getElementById('new-hint-input');
+        const word = wordInput.value.trim().toUpperCase();
+        const hint = hintInput.value.trim();
+        
+        const validRegex = /^[A-ZÄÖÜß\s]+$/;
+        
+        if (word && validRegex.test(word)) {
+            const exists = wordBank.some(w => w.word === word);
+            if (!exists) {
+                wordBank.push({ word: word, hint: hint }); 
+                saveWordBank(); 
+                renderWordList(); 
+                wordInput.value = ''; hintInput.value = '';
+            } else { alert("Dieses Wort ist bereits in der Liste!"); }
+        } else { alert("Bitte nur deutsche Buchstaben und Leerzeichen verwenden."); }
+    }
+
+    function deleteWord(index) { wordBank.splice(index, 1); saveWordBank(); renderWordList(); }
+    function toggleTeacher() { document.getElementById('teacher-panel').classList.toggle('show'); }
+
+    function generateQR() {
+        if (wordBank.length === 0) return alert("Bitte mindestens ein Wort hinzufügen!");
+        
+        const dataString = JSON.stringify(wordBank);
+        const encodedData = btoa(encodeURIComponent(dataString));
+        const baseUrl = window.location.href.split('?')[0];
+        const shareUrl = baseUrl + "?game=" + encodedData;
+
+        const qrImg = document.getElementById('qr-code-img');
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&color=2c3e50`;
+        
+        document.getElementById('qr-modal').style.display = 'flex';
+        document.getElementById('teacher-panel').classList.remove('show');
+    }
+
+    function startRandomGame() {
+        if (wordBank.length === 0) return;
+        currentWordObj = wordBank[Math.floor(Math.random() * wordBank.length)];
+        resetGame();
+    }
+
+    function resetGame() {
+        guessedLetters.clear(); wrongCount = 0; isGameOver = false;
+        document.getElementById('message').innerText = "";
+        
+        const hintBox = document.getElementById('hint-display');
+        if (currentWordObj.hint) {
+            hintBox.innerText = `💡 Hinweis: ${currentWordObj.hint}`;
+            hintBox.style.display = "block";
+        } else {
+            hintBox.style.display = "none";
+        }
+
+        gsap.to("#next-btn", { display: "none", opacity: 0, duration: 0.2 });
+
+        gsap.to("body", { background: "linear-gradient(135deg, #4ca1af 0%, #c4e0e5 100%)", duration: 1.5 });
+        gsap.to(".mountain-path", { fill: "#72a8b2", duration: 1.5 }); // Berge wieder hell
+        
+        // Reset Sonne und Mond
+        gsap.killTweensOf("#sun"); gsap.killTweensOf("#moon");
+        gsap.set("#sun", { x: 0, y: 0 }); gsap.set("#moon", { x: 0, y: 0 });
+        
+        gsap.to("#sun", { 
+            top: "15vh", right: "15vw", left: "auto", background: "#fceabb", 
+            boxShadow: "0 0 60px 20px rgba(252, 234, 187, 0.8)", width: 120, height: 120, duration: 1.5 
+        });
+        
+        gsap.to("#moon", { top: "100vh", left: "-10vw", opacity: 0, duration: 1 });
+        gsap.to("#stars-container", { opacity: 0, duration: 1 });
+        
+        gsap.to(":root", { 
+            "--text-color": "#2c3e50", "--glass-bg": "rgba(255, 255, 255, 0.15)", "--glass-border": "rgba(255, 255, 255, 0.3)", duration: 1 
+        });
+
+        renderWord(); renderKeyboard(); createDandelion();
+    }
+
+    function createDandelion() {
+        const group = document.getElementById('seeds-group');
+        group.innerHTML = ''; seedElements = [];
+        const goldenRatio = 137.5; 
+        const centerX = 150; const centerY = 150;
+
+        for (let i = 0; i < maxLives; i++) {
+            let r = Math.sqrt(i + 1) * 16; 
+            let theta = i * goldenRatio;
+            let x = centerX + r * Math.cos(theta * Math.PI / 180);
+            let y = centerY + r * Math.sin(theta * Math.PI / 180);
+
+            let g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("class", "seed");
+            
+            let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", centerX); line.setAttribute("y1", centerY);
+            line.setAttribute("x2", x); line.setAttribute("y2", y);
+            line.setAttribute("class", "seed-line");
+
+            let fluffGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            let angleFromCenter = Math.atan2(y - centerY, x - centerX);
+            
+            for(let j = -2; j <= 2; j++) {
+                let fLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                let spreadAngle = angleFromCenter + (j * 0.35);
+                let fLength = 12;
+                fLine.setAttribute("x1", x); fLine.setAttribute("y1", y);
+                fLine.setAttribute("x2", x + Math.cos(spreadAngle) * fLength);
+                fLine.setAttribute("y2", y + Math.sin(spreadAngle) * fLength);
+                fLine.setAttribute("stroke", "rgba(255,255,255,0.85)");
+                fLine.setAttribute("stroke-width", "1");
+                fluffGroup.appendChild(fLine);
+            }
+
+            let dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", x); dot.setAttribute("cy", y);
+            dot.setAttribute("r", "2.5"); dot.setAttribute("class", "seed-dot");
+
+            g.appendChild(line); g.appendChild(fluffGroup); g.appendChild(dot);
+            group.appendChild(g); seedElements.push(g);
+
+            gsap.to(g, {
+                rotation: (Math.random() - 0.5) * 8, transformOrigin: `${centerX}px ${centerY}px`,
+                duration: 2 + Math.random(), repeat: -1, yoyo: true, ease: "sine.inOut"
+            });
+        }
+    }
+
+    function renderWord() {
+        const container = document.getElementById('word-display'); container.innerHTML = '';
+        const word = currentWordObj.word;
+        for (let char of word) {
+            let box = document.createElement('div');
+            if (char === ' ') { box.className = 'letter-tile space'; } 
+            else {
+                box.className = 'letter-tile';
+                if (guessedLetters.has(char)) {
+                    box.innerText = char;
+                    gsap.from(box, { y: -20, opacity: 0, rotationX: 90, duration: 0.5, ease: "back.out(1.7)" });
+                }
+            }
+            container.appendChild(box);
+        }
+    }
+
+    function renderKeyboard() {
+        const container = document.getElementById('keyboard'); container.innerHTML = '';
+        keyboardLayout.forEach(row => {
+            let rowDiv = document.createElement('div'); rowDiv.className = 'keyboard-row';
+            row.forEach(char => {
+                let btn = document.createElement('button');
+                btn.className = 'key'; btn.innerText = char;
+                btn.onclick = () => handleGuess(char, btn);
+                rowDiv.appendChild(btn);
+            });
+            container.appendChild(rowDiv);
+        });
+    }
+
+    function handleGuess(char, btn) {
+        if (isGameOver || guessedLetters.has(char)) return;
+
+        guessedLetters.add(char);
+        if (currentWordObj.word.includes(char)) {
+            btn.classList.add('correct');
+            gsap.from(btn, { scale: 1.2, duration: 0.3, ease: "back.out(2)" });
+            renderWord();
+            if (checkWin()) triggerWin();
+        } else {
+            btn.classList.add('wrong');
+            gsap.to(btn, { x: [-5, 5, -5, 5, 0], duration: 0.4 });
+            wrongCount++; blowOneSeed(); updateEnvironment();
+            if (wrongCount >= maxLives) triggerLose();
+        }
+    }
+
+    function blowOneSeed() {
+        const remaining = seedElements.filter(el => !el.classList.contains('blown'));
+        if (remaining.length > 0) {
+            const seed = remaining[Math.floor(Math.random() * remaining.length)];
+            seed.classList.add('blown'); gsap.killTweensOf(seed);
+            gsap.to(seed, {
+                x: 300 + Math.random() * 200, y: -250 - Math.random() * 150,
+                rotation: 45 + Math.random() * 90, opacity: 0,
+                duration: 3 + Math.random(), ease: "power1.inOut"
+            });
+        }
+    }
+
+    function updateEnvironment() {
+        const progress = wrongCount / maxLives;
+        if (progress < 1) {
+            let r1 = Math.round(76 + (progress * 179)); let g1 = Math.round(161 - (progress * 35)); let b1 = Math.round(175 - (progress * 80));
+            let r2 = Math.round(196 + (progress * 58)); let g2 = Math.round(224 - (progress * 44)); let b2 = Math.round(229 - (progress * 106));
+
+            gsap.to("body", { background: `linear-gradient(135deg, rgb(${r1}, ${g1}, ${b1}) 0%, rgb(${r2}, ${g2}, ${b2}) 100%)`, duration: 1 });
+            gsap.to("#sun", {
+                background: "#ff5e62",
+                boxShadow: "0 0 50px 15px rgba(255, 94, 98, 0.8)", duration: 1
+            });
+        }
+    }
+
+    function checkWin() {
+        for (let char of currentWordObj.word) { if (char !== ' ' && !guessedLetters.has(char)) return false; } return true;
+    }
+
+    function triggerWin() {
+        isGameOver = true;
+        let msg = document.getElementById('message'); msg.innerText = "Wunderbar!";
+        gsap.from(msg, { scale: 0.5, opacity: 0, duration: 1, ease: "elastic.out(1, 0.5)" });
+
+        gsap.to("body", { background: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)", duration: 2 });
+        gsap.to(".mountain-path", { fill: "#d4a373", duration: 2 }); // Berge werden golden
+        
+        gsap.to("#sun", { 
+            top: "10vh", right: "50%", x: "50%", width: 180, height: 180,
+            background: "#ffffff", boxShadow: "0 0 100px 50px rgba(255, 255, 255, 0.9), 0 0 200px 100px rgba(253, 160, 133, 0.5)",
+            duration: 2.5, ease: "power2.out"
+        });
+
+        gsap.to(":root", { "--text-color": "#fff", "--glass-bg": "rgba(255, 255, 255, 0.25)", duration: 1 });
+        
+        seedElements.forEach(seed => {
+            if (!seed.classList.contains('blown')) {
+                gsap.killTweensOf(seed);
+                gsap.to(seed, {
+                    x: (Math.random() - 0.5) * 600, y: (Math.random() - 0.5) * 600,
+                    opacity: 0, scale: 2, duration: 3, ease: "power3.out"
+                });
+            }
+        });
+
+        const end = Date.now() + 4000;
+        (function frame() {
+            confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ffffff', '#fceabb'] });
+            confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ffffff', '#fceabb'] });
+            if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+
+        showNextButton();
+    }
+
+    function triggerLose() {
+        isGameOver = true;
+        let msg = document.getElementById('message'); 
+        msg.innerText = currentWordObj.word; 
+        gsap.from(msg, { y: -20, opacity: 0, duration: 1 });
+
+        // Hintergrund und Berge werden dunkel
+        gsap.to("body", { background: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)", duration: 2.5 });
+        gsap.to(".mountain-path", { fill: "#112233", duration: 2.5 });
+        
+        // Sonne geht bogenförmig nach RECHTS UNTEN hinter die Berge
+        gsap.to("#sun", { x: "25vw", duration: 2.5, ease: "linear" }); 
+        gsap.to("#sun", { y: "85vh", duration: 2.5, ease: "power2.in" });
+
+        // Mond geht bogenförmig auf (von links unten)
+        gsap.to("#moon", { x: "25vw", duration: 2.5, ease: "linear", delay: 0.5 });
+        gsap.to("#moon", { y: "-80vh", opacity: 1, duration: 2.5, ease: "power2.out", delay: 0.5 });
+
+        gsap.to("#stars-container", { opacity: 1, duration: 3 });
+        gsap.to(":root", { "--text-color": "#ecf0f1", "--glass-bg": "rgba(0, 0, 0, 0.3)", "--glass-border": "rgba(255, 255, 255, 0.1)", duration: 1 });
+        
+        showNextButton();
+    }
+
+    function showNextButton() {
+        const btn = document.getElementById('next-btn');
+        btn.style.display = "block";
+        gsap.to(btn, { opacity: 1, y: -10, duration: 1, delay: 1.5 });
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
