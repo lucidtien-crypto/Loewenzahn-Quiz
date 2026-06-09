@@ -59,12 +59,11 @@
             opacity: 0; z-index: 4; pointer-events: none;
         }
 
-        /* Neue Berge */
         #mountains {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 45vh;
             z-index: 3; pointer-events: none; overflow: hidden;
         }
-        .mountain-path { fill: #72a8b2; } /* Standard Tag-Farbe */
+        .mountain-path { fill: #72a8b2; }
 
         #landscape {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 35vh;
@@ -78,44 +77,59 @@
             100% { transform: scaleY(1.1) translateY(-10px); }
         }
 
+        /* Layout zentriert */
         #main-wrapper {
             position: relative; z-index: 10;
             width: 100%; height: 100%; display: flex; flex-direction: column; 
             align-items: center; justify-content: flex-end; padding-bottom: 5vh; max-width: 900px; margin: 0 auto;
         }
 
+        /* Pusteblume zentriert im Hintergrund der Buchstaben */
         #dandelion-container {
-            position: relative; width: 300px; height: 380px; margin-bottom: -20px; margin-right: 15%; 
+            position: relative; width: 300px; height: 400px; 
+            margin-bottom: -100px; /* Zieht die UI darüber, versteckt den Stängel */
+            z-index: 1; 
         }
         #dandelion-art { width: 100%; height: 100%; overflow: visible; }
         .stem { stroke: #78e08f; stroke-width: 4; fill: none; filter: drop-shadow(0 0 5px rgba(120, 224, 143, 0.6)); }
-        .seed { transform-origin: 150px 150px; opacity: 0.95; }
-        .seed-line { stroke: rgba(255,255,255,0.7); stroke-width: 1.5; }
-        .seed-dot { fill: rgba(255,255,255,1); filter: drop-shadow(0 0 4px white); }
+        .seed { transform-origin: 150px 150px; opacity: 0.9; }
+        .seed-path { stroke: rgba(255,255,255,0.7); stroke-width: 1; fill: none; }
+        .seed-dot { fill: rgba(255,255,255,1); filter: drop-shadow(0 0 3px white); }
+
+        /* Spiel-UI (Hinweis, Wort, Tastatur) VOR der Blume */
+        #game-ui {
+            position: relative; z-index: 10;
+            display: flex; flex-direction: column; align-items: center; width: 100%;
+        }
 
         #hint-display {
             font-family: 'Inter', sans-serif; font-size: 1.2rem; font-style: italic;
-            color: var(--text-color); margin-bottom: 10px; opacity: 0.8;
-            background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px;
+            color: var(--text-color); opacity: 0.9;
+            background: rgba(255,255,255,0.3); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            padding: 5px 20px; border-radius: 20px; margin-bottom: 5px;
+            box-shadow: var(--glass-shadow);
         }
 
         #message {
             font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700;
-            color: var(--text-color); margin-bottom: 20px; text-align: center;
+            color: var(--text-color); text-align: center;
             min-height: 40px; text-shadow: 0 2px 10px rgba(255,255,255,0.5);
-            letter-spacing: 2px;
+            letter-spacing: 2px; margin-bottom: 10px;
         }
 
-        #word-display { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; padding: 0 15px; }
+        #word-display { 
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; 
+            padding: 0; margin-bottom: 25px;
+        }
         .letter-tile {
             width: 50px; height: 60px;
-            background: var(--glass-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border); border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
             font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: bold;
             color: var(--text-color); box-shadow: var(--glass-shadow);
         }
-        .letter-tile.space { background: transparent; border: none; box-shadow: none; width: 25px; }
+        .letter-tile.space { background: transparent; border: none; box-shadow: none; width: 25px; backdrop-filter: none; }
 
         #keyboard {
             display: flex; flex-direction: column; gap: 8px; align-items: center;
@@ -134,7 +148,7 @@
         .key.wrong { background: rgba(0, 0, 0, 0.2); color: rgba(255, 255, 255, 0.4); border: 1px solid rgba(0,0,0,0.1); pointer-events: none; }
 
         #next-btn {
-            margin-top: 20px; padding: 12px 30px; font-size: 1.1rem; font-weight: 600;
+            margin-top: 15px; padding: 12px 30px; font-size: 1.1rem; font-weight: 600;
             background: linear-gradient(135deg, #f6d365, #fda085); color: #fff;
             border: none; border-radius: 30px; cursor: pointer;
             box-shadow: 0 8px 15px rgba(0,0,0,0.1); transition: all 0.3s;
@@ -223,15 +237,17 @@
         </svg>
     </div>
 
-    <div id="hint-display"></div>
-    <div id="message"></div>
-    <div id="word-display"></div>
-    <div id="keyboard"></div>
-    <button id="next-btn" onclick="startRandomGame()">Nächstes Wort ➔</button>
+    <div id="game-ui">
+        <div id="hint-display"></div>
+        <div id="message"></div>
+        <div id="word-display"></div>
+        <div id="keyboard"></div>
+        <button id="next-btn" onclick="startRandomGame()">Nächstes Wort ➔</button>
+    </div>
 </div>
 
 <div class="controls-container" id="controls-container">
-    <button class="control-btn" id="settings-btn" onclick="toggleTeacher()">⚙️ Einstellungen</button>
+    <button class="control-btn" id="settings-btn" onclick="toggleTeacher()">⚙️ Einstellung</button>
     <button class="control-btn" id="qr-btn-main" onclick="generateQR()">📲 QR-Code teilen</button>
 </div>
 
@@ -245,8 +261,8 @@
 
     <hr style="border:0; border-top: 1px solid #ddd; margin: 10px 0;">
     <div id="word-list"></div>
-    <button onclick="startRandomGame(); document.getElementById('teacher-panel').classList.remove('show');" style="width: 100%; padding: 12px; background: #2980b9; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px;">
-        ▶ Testspiel starten
+    <button onclick="startRandomGame(); document.getElementById('teacher-panel').classList.remove('show');" style="width: 100%; padding: 12px; background: #2c3e50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px;">
+        Speichern
     </button>
 </div>
 
@@ -262,6 +278,9 @@
 
 <script>
     const maxLives = 12;
+    const totalSeeds = 120; // 120 Samen für eine volle, runde Blume
+    const seedsPerMistake = Math.ceil(totalSeeds / maxLives); // Mehrere Samen pro Fehler wegblasen
+
     let wordBank = [];
     let currentWordObj = null;
     let guessedLetters = new Set();
@@ -275,11 +294,10 @@
         ['Y', 'X', 'C', 'V', 'B', 'N', 'M', 'ß']
     ];
 
-    // Click Outside Logik für das Einstellungen-Panel
     document.addEventListener('mousedown', function(event) {
         const panel = document.getElementById('teacher-panel');
         const settingsBtn = document.getElementById('settings-btn');
-        if (panel.classList.contains('show') && !panel.contains(event.target) && !settingsBtn.contains(event.target)) {
+        if (panel && panel.classList.contains('show') && !panel.contains(event.target) && !settingsBtn.contains(event.target)) {
             panel.classList.remove('show');
         }
     });
@@ -428,11 +446,9 @@
         }
 
         gsap.to("#next-btn", { display: "none", opacity: 0, duration: 0.2 });
-
         gsap.to("body", { background: "linear-gradient(135deg, #4ca1af 0%, #c4e0e5 100%)", duration: 1.5 });
-        gsap.to(".mountain-path", { fill: "#72a8b2", duration: 1.5 }); // Berge wieder hell
+        gsap.to(".mountain-path", { fill: "#72a8b2", duration: 1.5 });
         
-        // Reset Sonne und Mond
         gsap.killTweensOf("#sun"); gsap.killTweensOf("#moon");
         gsap.set("#sun", { x: 0, y: 0 }); gsap.set("#moon", { x: 0, y: 0 });
         
@@ -455,10 +471,11 @@
         const group = document.getElementById('seeds-group');
         group.innerHTML = ''; seedElements = [];
         const goldenRatio = 137.5; 
-        const centerX = 150; const centerY = 150;
+        const centerX = 150; const centerY = 150; // Mitte der ViewBox 300x400
 
-        for (let i = 0; i < maxLives; i++) {
-            let r = Math.sqrt(i + 1) * 16; 
+        // Wir erstellen 120 Samen für eine extrem dichte und runde Pusteblume
+        for (let i = 0; i < totalSeeds; i++) {
+            let r = Math.sqrt(i + 1) * 6; // Radius für perfekte Form
             let theta = i * goldenRatio;
             let x = centerX + r * Math.cos(theta * Math.PI / 180);
             let y = centerY + r * Math.sin(theta * Math.PI / 180);
@@ -469,21 +486,28 @@
             let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             line.setAttribute("x1", centerX); line.setAttribute("y1", centerY);
             line.setAttribute("x2", x); line.setAttribute("y2", y);
-            line.setAttribute("class", "seed-line");
+            line.setAttribute("class", "seed-path");
 
             let fluffGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
             let angleFromCenter = Math.atan2(y - centerY, x - centerX);
             
-            for(let j = -2; j <= 2; j++) {
-                let fLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                let spreadAngle = angleFromCenter + (j * 0.35);
-                let fLength = 12;
-                fLine.setAttribute("x1", x); fLine.setAttribute("y1", y);
-                fLine.setAttribute("x2", x + Math.cos(spreadAngle) * fLength);
-                fLine.setAttribute("y2", y + Math.sin(spreadAngle) * fLength);
-                fLine.setAttribute("stroke", "rgba(255,255,255,0.85)");
-                fLine.setAttribute("stroke-width", "1");
-                fluffGroup.appendChild(fLine);
+            // Weiche, flauschige Pfade statt spitzer Linien
+            let numCurves = 5; 
+            for(let j = 0; j < numCurves; j++) {
+                let fPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                let spreadAngle = angleFromCenter + (j * (0.8 / numCurves)) - 0.4;
+                let fLength = 18; 
+                
+                let xTip = x + Math.cos(spreadAngle) * fLength;
+                let yTip = y + Math.sin(spreadAngle) * fLength;
+                
+                let xControl = (x + xTip) / 2 + (Math.random() - 0.5) * 5; 
+                let yControl = (y + yTip) / 2 + (Math.random() - 0.5) * 5;
+
+                fPath.setAttribute("d", `M ${x} ${y} Q ${xControl} ${yControl} ${xTip} ${yTip}`);
+                fPath.setAttribute("class", "seed-path");
+                fPath.setAttribute("stroke", "rgba(255,255,255,0.6)");
+                fluffGroup.appendChild(fPath);
             }
 
             let dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -543,16 +567,20 @@
         } else {
             btn.classList.add('wrong');
             gsap.to(btn, { x: [-5, 5, -5, 5, 0], duration: 0.4 });
-            wrongCount++; blowOneSeed(); updateEnvironment();
+            wrongCount++; blowSeeds(); updateEnvironment();
             if (wrongCount >= maxLives) triggerLose();
         }
     }
 
-    function blowOneSeed() {
+    function blowSeeds() {
         const remaining = seedElements.filter(el => !el.classList.contains('blown'));
-        if (remaining.length > 0) {
-            const seed = remaining[Math.floor(Math.random() * remaining.length)];
-            seed.classList.add('blown'); gsap.killTweensOf(seed);
+        let toBlow = Math.min(seedsPerMistake, remaining.length);
+        
+        for (let i = 0; i < toBlow; i++) {
+            let idx = Math.floor(Math.random() * remaining.length);
+            let seed = remaining.splice(idx, 1)[0];
+            seed.classList.add('blown'); 
+            gsap.killTweensOf(seed);
             gsap.to(seed, {
                 x: 300 + Math.random() * 200, y: -250 - Math.random() * 150,
                 rotation: 45 + Math.random() * 90, opacity: 0,
@@ -585,7 +613,7 @@
         gsap.from(msg, { scale: 0.5, opacity: 0, duration: 1, ease: "elastic.out(1, 0.5)" });
 
         gsap.to("body", { background: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)", duration: 2 });
-        gsap.to(".mountain-path", { fill: "#d4a373", duration: 2 }); // Berge werden golden
+        gsap.to(".mountain-path", { fill: "#d4a373", duration: 2 }); 
         
         gsap.to("#sun", { 
             top: "10vh", right: "50%", x: "50%", width: 180, height: 180,
@@ -595,14 +623,23 @@
 
         gsap.to(":root", { "--text-color": "#fff", "--glass-bg": "rgba(255, 255, 255, 0.25)", duration: 1 });
         
-        seedElements.forEach(seed => {
-            if (!seed.classList.contains('blown')) {
-                gsap.killTweensOf(seed);
-                gsap.to(seed, {
-                    x: (Math.random() - 0.5) * 600, y: (Math.random() - 0.5) * 600,
-                    opacity: 0, scale: 2, duration: 3, ease: "power3.out"
-                });
-            }
+        // Magisches Nachwachsen der verlorenen Samen
+        const blownSeeds = seedElements.filter(el => el.classList.contains('blown'));
+        blownSeeds.forEach((seed, index) => {
+            seed.classList.remove('blown');
+            gsap.killTweensOf(seed);
+            
+            // X und Y zurücksetzen
+            gsap.fromTo(seed, 
+                { scale: 0, x: 0, y: 0, rotation: 0 }, 
+                { scale: 1, opacity: 0.9, duration: 1.5, delay: index * 0.015, ease: "back.out(1.5)" }
+            );
+            
+            // Die Schwing-Animation wieder hinzufügen
+            gsap.to(seed, {
+                rotation: (Math.random() - 0.5) * 8, transformOrigin: `150px 150px`,
+                duration: 2 + Math.random(), repeat: -1, yoyo: true, ease: "sine.inOut", delay: 1.5
+            });
         });
 
         const end = Date.now() + 4000;
@@ -621,15 +658,12 @@
         msg.innerText = currentWordObj.word; 
         gsap.from(msg, { y: -20, opacity: 0, duration: 1 });
 
-        // Hintergrund und Berge werden dunkel
         gsap.to("body", { background: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)", duration: 2.5 });
         gsap.to(".mountain-path", { fill: "#112233", duration: 2.5 });
         
-        // Sonne geht bogenförmig nach RECHTS UNTEN hinter die Berge
         gsap.to("#sun", { x: "25vw", duration: 2.5, ease: "linear" }); 
         gsap.to("#sun", { y: "85vh", duration: 2.5, ease: "power2.in" });
 
-        // Mond geht bogenförmig auf (von links unten)
         gsap.to("#moon", { x: "25vw", duration: 2.5, ease: "linear", delay: 0.5 });
         gsap.to("#moon", { y: "-80vh", opacity: 1, duration: 2.5, ease: "power2.out", delay: 0.5 });
 
